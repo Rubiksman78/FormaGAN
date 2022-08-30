@@ -43,31 +43,11 @@ Super, maintenant regardons de plus près à quoi ressemblent nos deux réseaux 
 
 Vu qu'on travaille sur des images, on va utiliser ces super réseaux que sont les CNN.:scream:
 
-Le discriminateur, c'est juste un classifieur CNN classique. Il prend des images et sort un scalaire qui est la probabilité que l'image soit réelle. Il y a quand même quelques subtilités dans l'architecture car on va assembler des blocs de : 
+Le discriminateur, c'est juste un classifieur CNN classique. Il prend des images et sort un scalaire qui est la probabilité que l'image soit réelle. 
+On assemble des blocs de 
 ```
-Convolution -> Batch Normalization -> LeakyReLU
+Convolution -> ReLU
 ```
-
-#### Leaky ReLU
-
-Vous vous souvenez de notre fonction d'activation ReLU ? Bah la LeakyReLU c'est presque la même sauf que dans $\mathbb{R}^{-}$, au lieu d'avoir juste 0, on a $y=\alpha x$ avec $\alpha$ un petit nombre du genre 2e-2. Ça permet de faire en sorte que si on se trouve à gauche, les gradients sont non nuls et donc le modèle peut continuer à s'entraîner (problème de la `Dead ReLU`). On peut bien sûr essayer d'autres fonctions d'activations pour éviter ce problème mais les gradients de la LeakyReLU restent aussi efficaces à calculer que la ReLU.:thumbsup:
-<p align="center">
-<img src="activation.png" alt="drawing" width="500" />
-</p>
-
-#### Batch Normalization
-
-Avant d'appliquer notre activation à la couche de convolution, on ajoute souvent dans les GAN une couche dite de Batch Normalization. L'objectif est de normaliser les données après chaque couche pour faciliter l'entraînement du modèle. Concrètement, on calcule la moyenne $\mu$ du batch de données et sa variance $\sigma^{2}$ puis on fait 
-
-$$x = \frac{x-\mu}{\sqrt{\sigma^{2}+\epsilon}}$$ 
-et 
-$$y = \alpha x + \beta$$ 
-($\epsilon$ permet juste d'éviter de diviser par 0, $\alpha$ et $\beta$ sont des paramètres apprenables pour ajuster la BN)
-<p align="center">
-<img src="bn.png" alt="drawing" width="700" />
-</p>
-On se retrouve donc avec des données de moyenne nulle et de variance 1 ! A quoi ça sert de faire ça ? De un ça stabilise l'entraînement car chaque couche va pouvour s'adapter à des données sur une même plage :sunny: (on évite le covariate shift). De deux, on a ce qu'on appelle un Regularizer, les sorties de chaque couche sont liées aux statistiques (moyenne et variance) calculées sur un batch et donc en ajoutant ces informations à nos données, on évite les problèmes d'overfitting. C'est particulièrement intéressant ici où on le verra plus tard, les GAN sont assez instables et utiliser de la Batch Normalization aide à pallier ce problème.
-
 ### El generator
 
 Le générateur, c'est un peu différent parce qu'on veut partir d'un vecteur puis "l'agrandir" assez pour avoir une image. Usuellement, on peut projeter le vecteur latent dans un espace de dimension supérieure pour le redimensionner en une petite image. 
@@ -77,7 +57,7 @@ Vecteur latent de $\R^{100} \rightarrow$ Dense($4 \times 4 \times 1024$ neurones
 
 Après on travaille uniquement sur des images et on assemble des blocs de 
 ```
-Convolution Transposée -> Batch Normalization -> ReLU
+Convolution Transposée -> ReLU
 ```
 
 #### Convolution Transposée
@@ -278,11 +258,45 @@ Exemple sur MNIST (les chiffres) : G génère que des 8, D est trompé au début
 </p>
 Résultat : on a un générateur qui ne reproduit pas la diversité du dataset réel et se concentre uniquement sur certaines parties de celui-ci. En plus, les images ne sont même pas assurées d'être de bonne qualité puisque le générateur ne va pas pouvoir s'entraîner correctement à reproduire l'entièreté de la distribution.
 
-### Des solutions ? :heart:
+## 6) Des solutions ? :heart:
 
 Cette partie va surtout servir à donner quelques tips de manière non exhaustive pour entraîner un GAN et pallier un peu aux problèmes exposés précédemment.
 
-- Normaliser les images dans [-1,1] : 
+- Premier tips: Utiliser une autre fonction d'activation. Ici c'est une pratique assez courante quand on utilise un modèle de Deep Learning et pas spécifique aux GANs. Typiquement, pour le discriminateur on va utiliser une LeakyReLU au lieu d'une ReLU.
+
+    ### Leaky ReLU
+
+    Vous vous souvenez de notre fonction d'activation ReLU ? Bah la LeakyReLU c'est presque la même sauf que dans $\mathbb{R}^{-}$, au lieu d'avoir juste 0, on a $y=\alpha x$ avec $\alpha$ un petit nombre du genre 2e-2. Ça permet de faire en sorte que si on se trouve à gauche, les gradients sont non nuls et donc le modèle peut continuer à s'entraîner (problème de la `Dead ReLU`). On peut bien sûr essayer d'autres fonctions d'activations (ELu,GELU,Swish...etc) pour éviter ce problème mais les gradients de la LeakyReLU restent aussi efficaces à calculer que la ReLU.:thumbsup:
+    <p align="center">
+    <img src="activation.png" alt="drawing" width="500" />
+    </p>
+
+
+ - Ensuite, on peut aussi ajouter ce qu'on appelle une couche de BatchNormalization dans les CNN.
+
+    ### Batch Normalization
+
+    Avant d'appliquer notre activation à la couche de convolution, on ajoute donc souvent dans les GAN une couche de Batch Normalization. L'objectif est de normaliser les données après chaque couche pour faciliter l'entraînement du modèle. Concrètement, on calcule la moyenne $\mu$ du batch de données et sa variance $\sigma^{2}$ puis on fait 
+
+    $$x = \frac{x-\mu}{\sqrt{\sigma^{2}+\epsilon}}$$ 
+    et 
+    $$y = \alpha x + \beta$$ 
+    ($\epsilon$ permet juste d'éviter de diviser par 0, $\alpha$ et $\beta$ sont des paramètres apprenables pour ajuster la BN)
+    <p align="center">
+    <img src="bn.png" alt="drawing" width="700" />
+    </p>
+    On se retrouve donc avec des données de moyenne nulle et de variance 1 ! A quoi ça sert de faire ça ? De un ça stabilise l'entraînement car chaque couche va pouvour s'adapter à des données sur une même plage :sunny: (on évite le covariate shift). De deux, on a ce qu'on appelle un Regularizer, les sorties de chaque couche sont liées aux statistiques (moyenne et variance) calculées sur un batch et donc en ajoutant ces informations à nos données, on évite les problèmes d'overfitting. C'est particulièrement intéressant ici où on le verra plus tard, les GAN sont assez instables et utiliser de la Batch Normalization aide à pallier ce problème. Après y a encore débat sur BN avant la fonction d'activation ou après, l'avantage de l'un ou l'autre reste discutable et c'est pas trop grave. 
+
+    Finalement, pour notre discriminateur on a plutôt la succession 
+    ```
+    Convolution -> Batch Normalization -> LeakyReLU
+    ```
+    et pour le générateur 
+    ```
+    ConvolutionTransposée -> Batch Normalization -> ReLU
+    ```
+
+- ### Normaliser les images dans [-1,1] : 
     on rappelle qu'une image RGB a pour dimension (longueur, largeur,3) et prend ses valeurs dans [0,255]. On peut alors normaliser les valeurs dans [0,1] puis dans [-1,1] par une transformation affine. Pour que les images générées aient aussi des valeurs dans [-1,1], on met une fonction d'activation en tangente hyperbolique à la fin du générateur (au lieu de linéaire pour [0,255] ou sigmoïde pour [0,1]).
    
     Pourquoi on fait ça ? Déjà en réduisant l'intervalle à [0,1], on fait en sorte de mettre en sortie du générateur une fonction d'activation bornée pas comme une activation linéaire car en pratique cela permet d'entraîner plus facilement le modèle. Et ensuite en passant dans [-1,1], on peut avoir des données de moyenne nulle, ce qui peut aider aussi à accélérer un peu l'apprentissage. La fonction d'activation tanh est aussi un peu mieux que la sigmoïde parce que ses gradients saturent un peu moins aux bords.
@@ -290,7 +304,7 @@ Cette partie va surtout servir à donner quelques tips de manière non exhaustiv
     <img src="tanh.png" alt="drawing" width="200" />
     </p>
 
-- One-sided label smoothing: 
+- ### One-sided label smoothing: 
     ici c'est tout con, au lieu de chercher à prédire 1 pour les images réelles, on prédit 0.9 ou au moins $1 - \epsilon$ avec $\epsilon$ petit, voire aléatoire à chaque fois. 
 
     Pourquoi on fait ça? Parce qu'on a vu que les gradients sont faibles si le discriminateur est trop fort à cause de la sigmoïde à la fin. Mais si on prédit plutôt 0.9, on a des gradients un peu moins faibles donc on continue d'apprendre, cool ! Et on fait ça que d'un seul côté (one-sided), sinon on peut s'éloigner au contraire de l'objectif recherché:
@@ -301,17 +315,17 @@ Cette partie va surtout servir à donner quelques tips de manière non exhaustiv
     <p align="center">
     <img src="labelsmooth.png" alt="drawing" width="400" />
     </p>
-- Ajouter labels: 
+- ### Ajouter labels: 
     on peut rajouter les classes des images en entrée du générateur et du discriminateur. En faisant ça, on conditionne l'entraînement avec plus d'informations donc ça aide l'entraînement et ça permet de lutter un peu contre le mode collapse. En plus, on peut alors contrôler ce que l'on génère directement au lieu d'avoir des images de classes aléatoires (même si on peut quand même contrôler les objets générés après coup par d'autres méthodes).
     <p align="center">
     <img src="cgan.png" alt="drawing" width="500" />
     </p>
-- Feature matching: 
+- ### Feature matching: 
     on peut aussi ajouter un terme supplémentaire dans la loss qui correspond à la différence entre des features extraites par un modèle préentraîné (genre VGG): 
     $$\mid \mathbb{E}_{x \sim p_{\text {data }}} \mathbf{f}(\mathbf{x})-\mathbb{E}_{\mathbf{z} \sim p_{\mathbf{z}}(\mathbf{z})} \mathbf{f}(G(\mathbf{z})) \|_{2}^{2}$$
     Ainsi, on demande au modèle de faire aussi correspondre des caractéristiques de plus haut niveau entre le générateur et le discriminateur.
 
-- WGAN:
+- ### WGAN:
 
     Le mode collapse c'est très relou parce que c'est pas évident à régler comme problème. Mais une nouvelle loss permet de nous aider, c'est la Wasserstein loss (d'où le  Wasserstein GAN). Le principe est qu'au lieu de se baser sur la JS-Divergence pour quantifier la dissimilarité entre les distributions, on va utiliser la Earth-Mover Distance (ou Wasserstein distance même) qui globalement représente le coût minimal de transport de masse d'une distribution à une autre. On peut voir ça comme le coût minimal de déplacer des boîtes d'une pile A à une pile B qui dépend de la masse de chaque boîte et de la distance de transport.
 
