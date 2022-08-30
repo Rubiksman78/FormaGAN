@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <!-- KaTeX requires the use of the HTML5 doctype. Without it, KaTeX may not render properly -->
 <html>
   <head>
@@ -11,8 +11,6 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"
         onload="renderMathInElement(document.body);"></script>
   </head>
-  ...
-</html>
 
 # Formation sur les GAN 
     Octobre 2022
@@ -366,3 +364,5 @@ Autres modèles génératifs:
 - Variational Autoencoder VAE
 - Flow-based models
 - Diffusion models (à la mode en ce moment!)
+  
+</html>
