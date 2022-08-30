@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <!-- KaTeX requires the use of the HTML5 doctype. Without it, KaTeX may not render properly -->
 <html>
   <head>
