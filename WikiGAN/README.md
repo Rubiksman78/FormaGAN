@@ -11,6 +11,7 @@ Et qu'est-ce que ça génère au juste ? Essentiellement des images mais aussi d
 Ce qui a fait le plus parler des GANs c'est surtout la génération de visages ultra-réalistes avec StyleGAN en 2018 puis ses enfants StyleGAN2 et StyleGAN3 qui ont permis de pousser vraiment loin la génération d'images. 
 
 Maintenant que tout ça est dit, voyons un peu plus en détail à quoi ressemble notre ami le GAN...
+
 ## 1) Principe d'un GAN
 
 ### Problème
@@ -53,7 +54,7 @@ Convolution -> ReLU
 Le générateur, c'est un peu différent parce qu'on veut partir d'un vecteur puis "l'agrandir" assez pour avoir une image. Usuellement, on peut projeter le vecteur latent dans un espace de dimension supérieure pour le redimensionner en une petite image. 
 
 Exemple : 
-Vecteur latent de $\R^{100} \rightarrow$ Dense($4 \times 4 \times 1024$ neurones) $\rightarrow$ Image (4,4,1024). Ou juste $\R^{128} \rightarrow$ Image (4,4,8)
+Vecteur latent de $\mathbb{R}^{100} \rightarrow$ Dense($4 \times 4 \times 1024$ neurones) $\rightarrow$ Image (4,4,1024). Ou juste $\mathbb{R}^{128} \rightarrow$ Image (4,4,8)
 
 Après on travaille uniquement sur des images et on assemble des blocs de 
 ```
@@ -264,37 +265,35 @@ Cette partie va surtout servir à donner quelques tips de manière non exhaustiv
 
 - Premier tips: Utiliser une autre fonction d'activation. Ici c'est une pratique assez courante quand on utilise un modèle de Deep Learning et pas spécifique aux GANs. Typiquement, pour le discriminateur on va utiliser une LeakyReLU au lieu d'une ReLU.
 
-    ### Leaky ReLU
-
-    Vous vous souvenez de notre fonction d'activation ReLU ? Bah la LeakyReLU c'est presque la même sauf que dans $\mathbb{R}^{-}$, au lieu d'avoir juste 0, on a $y=\alpha x$ avec $\alpha$ un petit nombre du genre 2e-2. Ça permet de faire en sorte que si on se trouve à gauche, les gradients sont non nuls et donc le modèle peut continuer à s'entraîner (problème de la `Dead ReLU`). On peut bien sûr essayer d'autres fonctions d'activations (ELu,GELU,Swish...etc) pour éviter ce problème mais les gradients de la LeakyReLU restent aussi efficaces à calculer que la ReLU.:thumbsup:
-    <p align="center">
-    <img src="activation.png" alt="drawing" width="500" />
-    </p>
+### Leaky ReLU
+Vous vous souvenez de notre fonction d'activation ReLU ? Bah la LeakyReLU c'est presque la même sauf que dans $\mathbb{R}^{-}$, au lieu d'avoir juste 0, on a $y=\alpha x$ avec $\alpha$ un petit nombre du genre 2e-2. Ça permet de faire en sorte que si on se trouve à gauche, les gradients sont non nuls et donc le modèle peut continuer à s'entraîner (problème de la `Dead ReLU`). On peut bien sûr essayer d'autres fonctions d'activations (ELu,GELU,Swish...etc) pour éviter ce problème mais les gradients de la LeakyReLU restent aussi efficaces à calculer que la ReLU.:thumbsup:
+<p align="center">
+<img src="activation.png" alt="drawing" width="500" />
+</p>
 
 
  - Ensuite, on peut aussi ajouter ce qu'on appelle une couche de BatchNormalization dans les CNN.
 
-    ### Batch Normalization
+### Batch Normalization
+Avant d'appliquer notre activation à la couche de convolution, on ajoute donc souvent dans les GAN une couche de Batch Normalization. L'objectif est de normaliser les données après chaque couche pour faciliter l'entraînement du modèle. Concrètement, on calcule la moyenne $\mu$ du batch de données et sa variance $\sigma^{2}$ puis on fait 
 
-    Avant d'appliquer notre activation à la couche de convolution, on ajoute donc souvent dans les GAN une couche de Batch Normalization. L'objectif est de normaliser les données après chaque couche pour faciliter l'entraînement du modèle. Concrètement, on calcule la moyenne $\mu$ du batch de données et sa variance $\sigma^{2}$ puis on fait 
+$$x = \frac{x-\mu}{\sqrt{\sigma^{2}+\epsilon}}$$ 
+et 
+$$y = \alpha x + \beta$$ 
+($\epsilon$ permet juste d'éviter de diviser par 0, $\alpha$ et $\beta$ sont des paramètres apprenables pour ajuster la BN)
+<p align="center">
+<img src="bn.png" alt="drawing" width="700" />
+</p>
+On se retrouve donc avec des données de moyenne nulle et de variance 1 ! A quoi ça sert de faire ça ? De un ça stabilise l'entraînement car chaque couche va pouvour s'adapter à des données sur une même plage :sunny: (on évite le covariate shift). De deux, on a ce qu'on appelle un Regularizer, les sorties de chaque couche sont liées aux statistiques (moyenne et variance) calculées sur un batch et donc en ajoutant ces informations à nos données, on évite les problèmes d'overfitting. C'est particulièrement intéressant ici où on le verra plus tard, les GAN sont assez instables et utiliser de la Batch Normalization aide à pallier ce problème. Après y a encore débat sur BN avant la fonction d'activation ou après, l'avantage de l'un ou l'autre reste discutable et c'est pas trop grave. 
 
-    $$x = \frac{x-\mu}{\sqrt{\sigma^{2}+\epsilon}}$$ 
-    et 
-    $$y = \alpha x + \beta$$ 
-    ($\epsilon$ permet juste d'éviter de diviser par 0, $\alpha$ et $\beta$ sont des paramètres apprenables pour ajuster la BN)
-    <p align="center">
-    <img src="bn.png" alt="drawing" width="700" />
-    </p>
-    On se retrouve donc avec des données de moyenne nulle et de variance 1 ! A quoi ça sert de faire ça ? De un ça stabilise l'entraînement car chaque couche va pouvour s'adapter à des données sur une même plage :sunny: (on évite le covariate shift). De deux, on a ce qu'on appelle un Regularizer, les sorties de chaque couche sont liées aux statistiques (moyenne et variance) calculées sur un batch et donc en ajoutant ces informations à nos données, on évite les problèmes d'overfitting. C'est particulièrement intéressant ici où on le verra plus tard, les GAN sont assez instables et utiliser de la Batch Normalization aide à pallier ce problème. Après y a encore débat sur BN avant la fonction d'activation ou après, l'avantage de l'un ou l'autre reste discutable et c'est pas trop grave. 
-
-    Finalement, pour notre discriminateur on a plutôt la succession 
-    ```
-    Convolution -> Batch Normalization -> LeakyReLU
-    ```
-    et pour le générateur 
-    ```
-    ConvolutionTransposée -> Batch Normalization -> ReLU
-    ```
+Finalement, pour notre discriminateur on a plutôt la succession 
+```
+Convolution -> Batch Normalization -> LeakyReLU
+```
+et pour le générateur 
+```
+ConvolutionTransposée -> Batch Normalization -> ReLU
+```
 
 - ### Normaliser les images dans [-1,1] : 
     on rappelle qu'une image RGB a pour dimension (longueur, largeur,3) et prend ses valeurs dans [0,255]. On peut alors normaliser les valeurs dans [0,1] puis dans [-1,1] par une transformation affine. Pour que les images générées aient aussi des valeurs dans [-1,1], on met une fonction d'activation en tangente hyperbolique à la fin du générateur (au lieu de linéaire pour [0,255] ou sigmoïde pour [0,1]).
@@ -315,11 +314,13 @@ Cette partie va surtout servir à donner quelques tips de manière non exhaustiv
     <p align="center">
     <img src="labelsmooth.png" alt="drawing" width="400" />
     </p>
+
 - ### Ajouter labels: 
     on peut rajouter les classes des images en entrée du générateur et du discriminateur. En faisant ça, on conditionne l'entraînement avec plus d'informations donc ça aide l'entraînement et ça permet de lutter un peu contre le mode collapse. En plus, on peut alors contrôler ce que l'on génère directement au lieu d'avoir des images de classes aléatoires (même si on peut quand même contrôler les objets générés après coup par d'autres méthodes).
     <p align="center">
     <img src="cgan.png" alt="drawing" width="500" />
     </p>
+
 - ### Feature matching: 
     on peut aussi ajouter un terme supplémentaire dans la loss qui correspond à la différence entre des features extraites par un modèle préentraîné (genre VGG): 
     $$\mid \mathbb{E}_{x \sim p_{\text {data }}} \mathbf{f}(\mathbf{x})-\mathbb{E}_{\mathbf{z} \sim p_{\mathbf{z}}(\mathbf{z})} \mathbf{f}(G(\mathbf{z})) \|_{2}^{2}$$
@@ -334,7 +335,7 @@ Cette partie va surtout servir à donner quelques tips de manière non exhaustiv
     <img src="wgan.jpeg" alt="drawing" width="600" />
     </p>
 
-    Ici le discriminateur devient ce qu'on appelle le "Critique" noté f, son rôle est différent car il attribue ici un score qui n'est plus binaire mais à valeur dans $\mathbb{R} $.
+    Ici le discriminateur devient ce qu'on appelle le "Critique" noté f, son rôle est différent car il attribue ici un score qui n'est plus binaire mais à valeur dans $\mathbb{R}$.
     Ce qu'il faut retenir c'est que la Wasserstein loss évite aux gradients de saturer comme pour le GAN "classique" et on arrive alors à avoir plus de diversité dans les échantillons générés.
 
 ## Ouverture :angel:
